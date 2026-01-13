@@ -125,5 +125,5 @@ func _replace_uids(paths):
 			_find_and_replace_uid(path)
 		elif extension in UID_IN_IMPORT_FILE_EXTENSIONS:
 			_find_and_replace_uid(path, ".import")
-		elif extension == "gd":
+		elif extension in UID_IN_UID_FILE_EXTENSIONS:
 			_find_and_replace_uid(path, ".uid")
