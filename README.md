@@ -1,7 +1,7 @@
 # Ef Ds UIDs
 For Godot 4.4+
 
-Replaces UIDs from scenes, scripts, and Godot's cache.  
+Replaces UIDs from scenes, scripts, imports, and Godot's cache.  
 
 ## Why?  
 
