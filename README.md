@@ -14,11 +14,33 @@ So f\*\*\* these UIDs.
 ## What?
 
 Supports the following extensions:
+- `gd`
 - `tres`
 - `tscn`
-- `gd`
+- `wav`
+- `mp3`
+- `ogg`
+- `svg`
+- `png`
+- `gif`
+- `gltf`
+- `glb`
+- `dae`
+- `obj`
+- `fbx`
+
+
+Any format that generates a `.import` file should be supported, but may be missing from the list. The user is encouraged to try adding it to the `UID_IN_IMPORT_FILE_EXTENSIONS` constant in `context_menu_plugin.gd`.
+
+> [!NOTE]  
+> Not all of these extensions have been tested, but most generate `.import` files which is what is actually getting content replaced.
+
 
 ## How?  
 
 Right-click on files in the File System Dock, and select `Replace UIDs`.
+
+> [!WARNING]  
+> Make sure the project is backed-up before using this feature. Users are enouraged to use version control (ie. git).
+
 
