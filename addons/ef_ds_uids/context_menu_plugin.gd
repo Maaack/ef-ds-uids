@@ -1,18 +1,19 @@
 @tool
 extends EditorContextMenuPlugin
 
-const ACCEPTED_EXTENSIONS : Array[String] = ["tres", "tscn", "gd"]
 const UID_IN_FILE_EXTENSIONS : Array[String] = ["tres", "tscn"]
-
+const UID_IN_IMPORT_FILE_EXTENSIONS : Array[String] = ["png", "svg", "gif", "wav", "mp3", "ogg", "gltf", "glb", "dae", "obj", "fbx"]
+const UID_IN_UID_FILE_EXTENSIONS : Array[String] = ["gd"]
 const UID_PREG_MATCH = r'uid:\/\/([0-9a-z]+)'
 
 func _popup_menu(paths):
 	var icon_texture = preload("res://addons/ef_ds_uids/replace.svg")
+	var accepted_extensions : Array[String] = UID_IN_FILE_EXTENSIONS + UID_IN_IMPORT_FILE_EXTENSIONS + UID_IN_UID_FILE_EXTENSIONS
 	if not paths.is_empty():
 		var has_useable_extension : bool = false
 		for path in paths:
 			if path is String:
-				if path.get_extension() in ACCEPTED_EXTENSIONS:
+				if path.get_extension() in accepted_extensions:
 					has_useable_extension = true
 					break
 		if has_useable_extension:
@@ -111,16 +112,18 @@ func find_and_replace_in_project(
 ) -> void:
 	_process_directory(root_path, search_text, replace_text, extensions)
 
+func _find_and_replace_uid(path : String, file_extension : String = "") -> void:
+	var int_uid := ResourceUID.create_id_for_path(path)
+	var new_uid = ResourceUID.id_to_text(int_uid).trim_prefix("uid://")
+	var old_uid = _replace_file_uid(path + file_extension, new_uid)
+	find_and_replace_in_project(old_uid, new_uid)
+
 func _replace_uids(paths):
 	for path in paths:
 		var extension = path.get_extension()
 		if extension in UID_IN_FILE_EXTENSIONS:
-			var int_uid := ResourceUID.create_id_for_path(path)
-			var new_uid = ResourceUID.id_to_text(int_uid).trim_prefix("uid://")
-			var old_uid = _replace_file_uid(path, new_uid)
-			find_and_replace_in_project(old_uid, new_uid)
+			_find_and_replace_uid(path)
+		elif extension in UID_IN_IMPORT_FILE_EXTENSIONS:
+			_find_and_replace_uid(path, ".import")
 		elif extension == "gd":
-			var int_uid := ResourceUID.create_id_for_path(path)
-			var new_uid = ResourceUID.id_to_text(int_uid).trim_prefix("uid://")
-			var old_uid = _replace_file_uid(path + ".uid", new_uid)
-			find_and_replace_in_project(old_uid, new_uid)
+			_find_and_replace_uid(path, ".uid")
