@@ -40,6 +40,9 @@ Any format that generates a `.import` file should be supported, but may be missi
 
 Right-click on files in the File System Dock, and select `Replace UIDs`.
 
+> [!IMPORTANT]  
+> Despite nuking the cache files, I've not managed to get the new UIDs to be picked up by the editor without nuking the project's entire `.godot/` folder. I'll update this once I find a better way.  
+
 > [!WARNING]  
 > Make sure the project is backed-up before using this feature. Users are enouraged to use version control (ie. git).
 
