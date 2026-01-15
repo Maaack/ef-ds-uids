@@ -1,29 +1,39 @@
 @tool
 extends EditorContextMenuPlugin
 
-const UID_IN_FILE_EXTENSIONS : Array[String] = ["tres", "tscn"]
-const UID_IN_IMPORT_FILE_EXTENSIONS : Array[String] = ["png", "svg", "gif", "wav", "mp3", "ogg", "gltf", "glb", "dae", "obj", "fbx"]
-const UID_IN_UID_FILE_EXTENSIONS : Array[String] = ["gd"]
+const UID_IN_FILE_EXTENSIONS : PackedStringArray = ["tres", "tscn"]
+const UID_IN_IMPORT_FILE_EXTENSIONS : PackedStringArray = ["png", "svg", "gif", "wav", "mp3", "ogg", "gltf", "glb", "dae", "obj", "fbx"]
+const UID_IN_UID_FILE_EXTENSIONS : PackedStringArray = ["gd"]
+const FIND_AND_REPLACE_EXTENSIONS : PackedStringArray = ["gd", "tscn", "tres", "cfg", "json", "txt", "import", "uid"]
 const UID_PREG_MATCH = r'uid:\/\/([0-9a-z]+)'
 
-func _popup_menu(paths):
-	var erase_icon = preload("res://addons/ef_ds_uids/assets/eraser.svg")
-	var replace_icon = preload("res://addons/ef_ds_uids/assets/replace.svg")
-	var accepted_extensions : Array[String] = UID_IN_FILE_EXTENSIONS + UID_IN_IMPORT_FILE_EXTENSIONS + UID_IN_UID_FILE_EXTENSIONS
-	if paths.is_empty(): return
-	var files_with_matching_extensions : int = 0
+func _expand_to_files(paths : PackedStringArray) -> PackedStringArray:
+	var result : PackedStringArray = []
+	var seen : Dictionary = {}
 	for path in paths:
-		if path is String:
-			if path.get_extension() in accepted_extensions:
-				files_with_matching_extensions += 1
-				if files_with_matching_extensions > 1:
-					break
-	if files_with_matching_extensions > 0:
-		var uid_text = "UID"
-		if files_with_matching_extensions > 1:
-			uid_text = "UIDs"
-		add_context_menu_item("Replace %s" % uid_text, _replace_uids, replace_icon)
-		add_context_menu_item("Erase %s" % uid_text, _erase_uids, erase_icon)
+		_collect_files(path, result, seen)
+	return result
+
+func _collect_files(path : String, result : PackedStringArray, seen : Dictionary) -> void:
+	if FileAccess.file_exists(path):
+		if not seen.has(path):
+			seen[path] = true
+			result.append(path)
+		return
+	elif DirAccess.dir_exists_absolute(path):
+		var dir := DirAccess.open(path)
+		if dir == null:
+			return
+		dir.list_dir_begin()
+		while true:
+			var name := dir.get_next()
+			if name == "":
+				break
+			if name == "." or name == "..":
+				continue
+			var full_path := path.path_join(name)
+			_collect_files(full_path, result, seen)
+		dir.list_dir_end()
 
 func _remove_uid(content : String) -> String:
 	var regex = RegEx.new()
@@ -74,9 +84,9 @@ func _remove_file_uid(path : String) -> String:
 	return removed_uid
 
 func _find_and_replace_in_file(
-	file_path: String,
-	search_text: String,
-	replace_text: String
+	file_path : String,
+	search_text : String,
+	replace_text : String
 ) -> void:
 	var contents := _get_file_text(file_path)
 	if not contents.contains(search_text):
@@ -85,10 +95,10 @@ func _find_and_replace_in_file(
 	_save_file_text(file_path, new_contents)
 
 func _find_and_replace_in_directory(
-	path: String,
-	search_text: String,
-	replace_text: String,
-	extensions: PackedStringArray
+	path : String,
+	search_text : String,
+	replace_text : String,
+	extensions : PackedStringArray
 ) -> void:
 	var dir := DirAccess.open(path)
 	if dir == null:
@@ -109,10 +119,10 @@ func _find_and_replace_in_directory(
 	dir.list_dir_end()
 	
 func find_and_replace_in_project(
-	search_text: String,
-	replace_text: String,
-	root_path: String = "res://",
-	extensions: PackedStringArray = ["gd", "tscn", "tres", "cfg", "json", "txt", "import", "uid"]
+	search_text : String,
+	replace_text : String,
+	root_path : String = "res://",
+	extensions : PackedStringArray = FIND_AND_REPLACE_EXTENSIONS
 ) -> void:
 	_find_and_replace_in_directory(root_path, search_text, replace_text, extensions)
 
@@ -137,7 +147,29 @@ func _parse_path_extensions(paths : PackedStringArray, method : Callable) -> voi
 			method.call(path, ".uid")
 
 func _replace_uids(paths):
-	_parse_path_extensions(paths, _find_and_replace_uid)
+	var file_paths = _expand_to_files(paths)
+	_parse_path_extensions(file_paths, _find_and_replace_uid)
 
 func _erase_uids(paths):
-	_parse_path_extensions(paths, _find_and_erase_uid)
+	var file_paths = _expand_to_files(paths)
+	_parse_path_extensions(file_paths, _find_and_erase_uid)
+
+func _popup_menu(paths):
+	var erase_icon = preload("res://addons/ef_ds_uids/assets/eraser.svg")
+	var replace_icon = preload("res://addons/ef_ds_uids/assets/replace.svg")
+	var accepted_extensions : PackedStringArray = UID_IN_FILE_EXTENSIONS + UID_IN_IMPORT_FILE_EXTENSIONS + UID_IN_UID_FILE_EXTENSIONS
+	if paths.is_empty(): return
+	var file_paths = _expand_to_files(paths)
+	var files_with_matching_extensions : int = 0
+	for path in file_paths:
+		if path is String:
+			if path.get_extension() in accepted_extensions:
+				files_with_matching_extensions += 1
+				if files_with_matching_extensions > 1:
+					break
+	if files_with_matching_extensions > 0:
+		var uid_text = "UID"
+		if files_with_matching_extensions > 1:
+			uid_text = "UIDs"
+		add_context_menu_item("Replace %s" % uid_text, _replace_uids, replace_icon)
+		add_context_menu_item("Erase %s" % uid_text, _erase_uids, erase_icon)
