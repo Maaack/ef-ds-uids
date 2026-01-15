@@ -111,10 +111,10 @@ func find_and_replace_in_project(
 
 func _find_and_replace_uid(path : String, file_extension : String = "") -> void:
 	var old_uid = _remove_file_uid(path + file_extension)
-	var int_uid := ResourceUID.create_id_for_path(path + file_extension)
+	var int_uid := ResourceUID.create_id_for_path(path)
 	var new_uid = ResourceUID.id_to_text(int_uid)
 	if not ResourceUID.has_id(int_uid):
-		ResourceUID.add_id(int_uid, path + file_extension)
+		ResourceUID.add_id(int_uid, path)
 	_find_and_replace_in_file(path + file_extension, old_uid, new_uid)
 	find_and_replace_in_project(old_uid, new_uid)
 	
