@@ -132,13 +132,23 @@ func _parse_path_extensions(paths : PackedStringArray, method : Callable) -> voi
 		elif extension in UID_IN_UID_FILE_EXTENSIONS:
 			method.call(path, ".uid")
 
+func _nuke_the_cache() -> void:
+	if FileAccess.file_exists("res://.godot/uid_cache.bin"):
+		DirAccess.remove_absolute("res://.godot/uid_cache.bin")
+		var file_paths = _expand_to_files(["res://.godot/editor/"])
+		for path in file_paths:
+			if path.get_file().begins_with("filesystem"):
+				DirAccess.remove_absolute(path)
+
 func _replace_uids(paths):
 	var file_paths = _expand_to_files(paths)
 	_parse_path_extensions(file_paths, _find_and_replace_uid)
+	_nuke_the_cache()
 
 func _erase_uids(paths):
 	var file_paths = _expand_to_files(paths)
 	_parse_path_extensions(file_paths, _find_and_erase_uid)
+	_nuke_the_cache()
 
 func _popup_menu(paths):
 	var erase_icon = preload("res://addons/ef_ds_uids/assets/eraser.svg")
