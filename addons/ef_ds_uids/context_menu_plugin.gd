@@ -7,17 +7,23 @@ const UID_IN_UID_FILE_EXTENSIONS : Array[String] = ["gd"]
 const UID_PREG_MATCH = r'uid:\/\/([0-9a-z]+)'
 
 func _popup_menu(paths):
-	var icon_texture = preload("res://addons/ef_ds_uids/replace.svg")
+	var erase_icon = preload("res://addons/ef_ds_uids/assets/eraser.svg")
+	var replace_icon = preload("res://addons/ef_ds_uids/assets/replace.svg")
 	var accepted_extensions : Array[String] = UID_IN_FILE_EXTENSIONS + UID_IN_IMPORT_FILE_EXTENSIONS + UID_IN_UID_FILE_EXTENSIONS
-	if not paths.is_empty():
-		var has_useable_extension : bool = false
-		for path in paths:
-			if path is String:
-				if path.get_extension() in accepted_extensions:
-					has_useable_extension = true
+	if paths.is_empty(): return
+	var files_with_matching_extensions : int = 0
+	for path in paths:
+		if path is String:
+			if path.get_extension() in accepted_extensions:
+				files_with_matching_extensions += 1
+				if files_with_matching_extensions > 1:
 					break
-		if has_useable_extension:
-			add_context_menu_item("Replace UIDs", _replace_uids, icon_texture)
+	if files_with_matching_extensions > 0:
+		var uid_text = "UID"
+		if files_with_matching_extensions > 1:
+			uid_text = "UIDs"
+		add_context_menu_item("Replace %s" % uid_text, _replace_uids, replace_icon)
+		add_context_menu_item("Erase %s" % uid_text, _erase_uids, erase_icon)
 
 func _remove_uid(content : String) -> String:
 	var regex = RegEx.new()
@@ -41,7 +47,7 @@ func _get_first_uid(content : String) -> String:
 	var regex = RegEx.new()
 	regex.compile(UID_PREG_MATCH)
 	var regex_match := regex.search(content)
-	return regex_match.get_string(1)
+	return regex_match.get_string()
 
 func _get_file_text(file_path : String) -> String:
 	var file = FileAccess.open(file_path, FileAccess.READ)
@@ -60,16 +66,14 @@ func _save_file_text(file_path : String, content : String) -> void:
 	file.store_string(content)
 	file.close()
 
-func _replace_file_uid(path : String, new_id : String) -> String:
+func _remove_file_uid(path : String) -> String:
 	var file_content = _get_file_text(path)
-	var old_uid = _get_first_uid(file_content)
-	var int_uid = ResourceUID.text_to_id(old_uid)
+	var removed_uid = _get_first_uid(file_content)
+	var int_uid = ResourceUID.text_to_id(removed_uid)
 	ResourceUID.remove_id(int_uid)
-	var replaced_content := _replace_uid(file_content, new_id)
-	_save_file_text(path, replaced_content)
-	return old_uid
+	return removed_uid
 
-func _process_file(
+func _find_and_replace_in_file(
 	file_path: String,
 	search_text: String,
 	replace_text: String
@@ -80,7 +84,7 @@ func _process_file(
 	var new_contents := contents.replace(search_text, replace_text)
 	_save_file_text(file_path, new_contents)
 
-func _process_directory(
+func _find_and_replace_in_directory(
 	path: String,
 	search_text: String,
 	replace_text: String,
@@ -99,31 +103,41 @@ func _process_directory(
 			continue
 		var full_path := path.path_join(name)
 		if dir.current_is_dir():
-			_process_directory(full_path, search_text, replace_text, extensions)
+			_find_and_replace_in_directory(full_path, search_text, replace_text, extensions)
 		elif name.get_extension() in extensions:
-			_process_file(full_path, search_text, replace_text)
+			_find_and_replace_in_file(full_path, search_text, replace_text)
 	dir.list_dir_end()
 	
 func find_and_replace_in_project(
 	search_text: String,
 	replace_text: String,
 	root_path: String = "res://",
-	extensions: PackedStringArray = ["gd", "tscn", "tres", "cfg", "json", "txt"]
+	extensions: PackedStringArray = ["gd", "tscn", "tres", "cfg", "json", "txt", "import", "uid"]
 ) -> void:
-	_process_directory(root_path, search_text, replace_text, extensions)
+	_find_and_replace_in_directory(root_path, search_text, replace_text, extensions)
 
 func _find_and_replace_uid(path : String, file_extension : String = "") -> void:
+	var old_uid = _remove_file_uid(path + file_extension)
 	var int_uid := ResourceUID.create_id_for_path(path)
-	var new_uid = ResourceUID.id_to_text(int_uid).trim_prefix("uid://")
-	var old_uid = _replace_file_uid(path + file_extension, new_uid)
+	var new_uid = ResourceUID.id_to_text(int_uid)
 	find_and_replace_in_project(old_uid, new_uid)
+	
+func _find_and_erase_uid(path : String, file_extension : String = "") -> void:
+	var old_uid = _remove_file_uid(path + file_extension)
+	find_and_replace_in_project(old_uid, "")
 
-func _replace_uids(paths):
+func _parse_path_extensions(paths : PackedStringArray, method : Callable) -> void:
 	for path in paths:
 		var extension = path.get_extension()
 		if extension in UID_IN_FILE_EXTENSIONS:
-			_find_and_replace_uid(path)
+			method.call(path)
 		elif extension in UID_IN_IMPORT_FILE_EXTENSIONS:
-			_find_and_replace_uid(path, ".import")
+			method.call(path, ".import")
 		elif extension in UID_IN_UID_FILE_EXTENSIONS:
-			_find_and_replace_uid(path, ".uid")
+			method.call(path, ".uid")
+
+func _replace_uids(paths):
+	_parse_path_extensions(paths, _find_and_replace_uid)
+
+func _erase_uids(paths):
+	_parse_path_extensions(paths, _find_and_erase_uid)
