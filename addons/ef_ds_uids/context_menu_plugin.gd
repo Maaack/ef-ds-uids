@@ -6,6 +6,8 @@ const UID_IN_IMPORT_FILE_EXTENSIONS : PackedStringArray = ["png", "svg", "gif", 
 const UID_IN_UID_FILE_EXTENSIONS : PackedStringArray = ["gd"]
 const FIND_AND_REPLACE_EXTENSIONS : PackedStringArray = ["gd", "tscn", "tres", "cfg", "json", "txt"]
 const UID_PREG_MATCH = r'uid:\/\/([0-9a-z]+)'
+const UID_IMPORT_PREG_MATCH = r'uid="uid:\/\/[0-9a-z]+" '
+
 
 func _expand_to_files(paths : PackedStringArray) -> PackedStringArray:
 	var result : PackedStringArray = []
@@ -122,6 +124,13 @@ func _find_and_erase_uid(path : String, file_extension : String = "") -> void:
 	var old_uid = _remove_file_uid(path + file_extension)
 	find_and_replace_in_project(old_uid, "")
 
+func _remove_imported_uids(path : String, file_extension : String = "") -> void:
+	var file_content = _get_file_text(path + file_extension)
+	var regex = RegEx.new()
+	regex.compile(UID_IMPORT_PREG_MATCH)
+	var new_content = regex.sub(file_content, "", true)
+	_save_file_text(path + file_extension, new_content)
+
 func _parse_path_extensions(paths : PackedStringArray, method : Callable) -> void:
 	for path in paths:
 		var extension = path.get_extension()
@@ -150,6 +159,10 @@ func _erase_uids(paths):
 	_parse_path_extensions(file_paths, _find_and_erase_uid)
 	_nuke_the_cache()
 
+func _erase_imported_uids(paths):
+	var file_paths = _expand_to_files(paths)
+	_parse_path_extensions(file_paths, _remove_imported_uids)
+
 func _popup_menu(paths):
 	var erase_icon = preload("res://addons/ef_ds_uids/assets/eraser.svg")
 	var replace_icon = preload("res://addons/ef_ds_uids/assets/replace.svg")
@@ -168,4 +181,4 @@ func _popup_menu(paths):
 		if files_with_matching_extensions > 1:
 			uid_text = "UIDs"
 		add_context_menu_item("Replace %s" % uid_text, _replace_uids, replace_icon)
-		add_context_menu_item("Erase %s" % uid_text, _erase_uids, erase_icon)
+		add_context_menu_item("Erase Imported UIDs", _erase_imported_uids, erase_icon)
