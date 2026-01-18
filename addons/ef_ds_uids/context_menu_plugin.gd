@@ -181,4 +181,4 @@ func _popup_menu(paths):
 		if files_with_matching_extensions > 1:
 			uid_text = "UIDs"
 		add_context_menu_item("Replace %s" % uid_text, _replace_uids, replace_icon)
-		add_context_menu_item("Erase %s" % uid_text, _erase_uids, erase_icon)
+		add_context_menu_item("Erase Imported UIDs", _erase_imported_uids, erase_icon)
