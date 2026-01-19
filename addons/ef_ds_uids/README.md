@@ -1,15 +1,17 @@
 # Ef Ds UIDs
 For Godot 4.4+
 
-Replaces UIDs from scenes, scripts, imports, and Godot's cache.  
+Tool for erasing or replacing UIDs from scenes, scripts, imports, and Godot's cache.  
+
+Because f*** these UIDs.
 
 ## Why?  
 
 The errors are obnoxious, and the caching is awful.  
 
-The editor doesn't even support fixing any of the warnings and errors it complains about.
+The editor doesn't even support fixing many of the warnings and errors it complains about.
 
-So f\*\*\* these UIDs.  
+As of 4.5.1, the built-in tools don't rebuild the UID cache for `.gd` files, either.
 
 ## What?
 
