@@ -6,8 +6,8 @@ const UID_IN_IMPORT_FILE_EXTENSIONS : PackedStringArray = ["png", "svg", "gif", 
 const UID_IN_UID_FILE_EXTENSIONS : PackedStringArray = ["gd"]
 const FIND_AND_REPLACE_EXTENSIONS : PackedStringArray = ["gd", "tscn", "tres", "cfg", "json", "txt"]
 const UID_PREG_MATCH = r'uid:\/\/([0-9a-z]+)'
-const UID_IMPORT_PREG_MATCH = r'uid="uid:\/\/[0-9a-z]+" '
-
+const UID_IMPORT_PREG_MATCH = r'uid="uid:\/\/[0-9a-z]+" path='
+const UID_IMPORT_PREG_REPLACE = "path="
 
 func _expand_to_files(paths : PackedStringArray) -> PackedStringArray:
 	var result : PackedStringArray = []
@@ -137,7 +137,7 @@ func _remove_imported_uids(path : String, file_extension : String = "") -> void:
 	var file_content = _get_file_text(path + file_extension)
 	var regex = RegEx.new()
 	regex.compile(UID_IMPORT_PREG_MATCH)
-	var new_content = regex.sub(file_content, "", true)
+	var new_content = regex.sub(file_content, UID_IMPORT_PREG_REPLACE, true)
 	_save_file_text(path + file_extension, new_content)
 
 func _parse_path_extensions(paths : PackedStringArray, method : Callable) -> void:
