@@ -91,7 +91,8 @@ func _find_and_replace_in_directory(
 	path : String,
 	search_text : String,
 	replace_text : String,
-	extensions : PackedStringArray
+	extensions : PackedStringArray,
+	skip_first : bool = false
 ) -> void:
 	var dir := DirAccess.open(path)
 	if dir == null:
@@ -108,7 +109,7 @@ func _find_and_replace_in_directory(
 		if dir.current_is_dir():
 			_find_and_replace_in_directory(full_path, search_text, replace_text, extensions)
 		elif name.get_extension() in extensions:
-			_find_and_replace_in_file(full_path, search_text, replace_text)
+			_find_and_replace_in_file(full_path, search_text, replace_text, skip_first)
 	dir.list_dir_end()
 	
 func find_and_replace_in_project(
@@ -117,7 +118,7 @@ func find_and_replace_in_project(
 	root_path : String = "res://",
 	extensions : PackedStringArray = FIND_AND_REPLACE_EXTENSIONS
 ) -> void:
-	_find_and_replace_in_directory(root_path, search_text, replace_text, extensions)
+	_find_and_replace_in_directory(root_path, search_text, replace_text, extensions, true)
 
 func _find_and_replace_uid(path : String, file_extension : String = "") -> void:
 	var old_uid = _remove_file_uid(path + file_extension)
