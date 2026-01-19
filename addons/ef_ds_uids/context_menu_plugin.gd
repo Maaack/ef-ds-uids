@@ -71,12 +71,20 @@ func _remove_file_uid(path : String) -> String:
 func _find_and_replace_in_file(
 	file_path : String,
 	search_text : String,
-	replace_text : String
+	replace_text : String,
+	skip_first : bool = false
 ) -> void:
 	var contents := _get_file_text(file_path)
 	if not contents.contains(search_text):
 		return
-	var new_contents := contents.replace(search_text, replace_text)
+	var new_contents : String
+	if skip_first:
+		var ignore_first = contents.find(search_text) + search_text.length()
+		var ignore_content := contents.substr(0, ignore_first)
+		var remaining_content := contents.substr(ignore_first)
+		new_contents = ignore_content + remaining_content.replace(search_text, replace_text)
+	else: 
+		new_contents = contents.replace(search_text, replace_text)
 	_save_file_text(file_path, new_contents)
 
 func _find_and_replace_in_directory(
