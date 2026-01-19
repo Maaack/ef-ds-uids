@@ -6,8 +6,8 @@ const UID_IN_IMPORT_FILE_EXTENSIONS : PackedStringArray = ["png", "svg", "gif", 
 const UID_IN_UID_FILE_EXTENSIONS : PackedStringArray = ["gd"]
 const FIND_AND_REPLACE_EXTENSIONS : PackedStringArray = ["gd", "tscn", "tres", "cfg", "json", "txt"]
 const UID_PREG_MATCH = r'uid:\/\/([0-9a-z]+)'
-const UID_IMPORT_PREG_MATCH = r'uid="uid:\/\/[0-9a-z]+" '
-
+const UID_IMPORT_PREG_MATCH = r'uid="uid:\/\/[0-9a-z]+" path='
+const UID_IMPORT_PREG_REPLACE = "path="
 
 func _expand_to_files(paths : PackedStringArray) -> PackedStringArray:
 	var result : PackedStringArray = []
@@ -71,19 +71,28 @@ func _remove_file_uid(path : String) -> String:
 func _find_and_replace_in_file(
 	file_path : String,
 	search_text : String,
-	replace_text : String
+	replace_text : String,
+	skip_first_line : bool = false
 ) -> void:
 	var contents := _get_file_text(file_path)
 	if not contents.contains(search_text):
 		return
-	var new_contents := contents.replace(search_text, replace_text)
+	var new_contents : String
+	if skip_first_line:
+		var ignore_first = contents.find("\n")
+		var ignore_content := contents.substr(0, ignore_first)
+		var remaining_content := contents.substr(ignore_first)
+		new_contents = ignore_content + remaining_content.replace(search_text, replace_text)
+	else: 
+		new_contents = contents.replace(search_text, replace_text)
 	_save_file_text(file_path, new_contents)
 
 func _find_and_replace_in_directory(
 	path : String,
 	search_text : String,
 	replace_text : String,
-	extensions : PackedStringArray
+	extensions : PackedStringArray,
+	skip_first_line : bool = false
 ) -> void:
 	var dir := DirAccess.open(path)
 	if dir == null:
@@ -98,9 +107,9 @@ func _find_and_replace_in_directory(
 			continue
 		var full_path := path.path_join(name)
 		if dir.current_is_dir():
-			_find_and_replace_in_directory(full_path, search_text, replace_text, extensions)
+			_find_and_replace_in_directory(full_path, search_text, replace_text, extensions, skip_first_line)
 		elif name.get_extension() in extensions:
-			_find_and_replace_in_file(full_path, search_text, replace_text)
+			_find_and_replace_in_file(full_path, search_text, replace_text, skip_first_line)
 	dir.list_dir_end()
 	
 func find_and_replace_in_project(
@@ -109,7 +118,7 @@ func find_and_replace_in_project(
 	root_path : String = "res://",
 	extensions : PackedStringArray = FIND_AND_REPLACE_EXTENSIONS
 ) -> void:
-	_find_and_replace_in_directory(root_path, search_text, replace_text, extensions)
+	_find_and_replace_in_directory(root_path, search_text, replace_text, extensions, true)
 
 func _find_and_replace_uid(path : String, file_extension : String = "") -> void:
 	var old_uid = _remove_file_uid(path + file_extension)
@@ -128,7 +137,7 @@ func _remove_imported_uids(path : String, file_extension : String = "") -> void:
 	var file_content = _get_file_text(path + file_extension)
 	var regex = RegEx.new()
 	regex.compile(UID_IMPORT_PREG_MATCH)
-	var new_content = regex.sub(file_content, "", true)
+	var new_content = regex.sub(file_content, UID_IMPORT_PREG_REPLACE, true)
 	_save_file_text(path + file_extension, new_content)
 
 func _parse_path_extensions(paths : PackedStringArray, method : Callable) -> void:
