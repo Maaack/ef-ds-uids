@@ -8,34 +8,7 @@ const FIND_AND_REPLACE_EXTENSIONS : PackedStringArray = ["gd", "tscn", "tres", "
 const UID_PREG_MATCH = r'uid:\/\/([0-9a-z]+)'
 const UID_IMPORT_PREG_MATCH = r'uid="uid:\/\/[0-9a-z]+" path='
 const UID_IMPORT_PREG_REPLACE = "path="
-
-func _expand_to_files(paths : PackedStringArray) -> PackedStringArray:
-	var result : PackedStringArray = []
-	var seen : Dictionary = {}
-	for path in paths:
-		_collect_files(path, result, seen)
-	return result
-
-func _collect_files(path : String, result : PackedStringArray, seen : Dictionary) -> void:
-	if FileAccess.file_exists(path):
-		if not seen.has(path):
-			seen[path] = true
-			result.append(path)
-		return
-	elif DirAccess.dir_exists_absolute(path):
-		var dir := DirAccess.open(path)
-		if dir == null:
-			return
-		dir.list_dir_begin()
-		while true:
-			var name := dir.get_next()
-			if name == "":
-				break
-			if name == "." or name == "..":
-				continue
-			var full_path := path.path_join(name)
-			_collect_files(full_path, result, seen)
-		dir.list_dir_end()
+const Utilities = preload("res://addons/ef_ds_uids/utilities.gd")
 
 func _get_first_uid(content : String) -> String:
 	var regex = RegEx.new()
@@ -150,26 +123,19 @@ func _parse_path_extensions(paths : PackedStringArray, method : Callable) -> voi
 		elif extension in UID_IN_UID_FILE_EXTENSIONS:
 			method.call(path, ".uid")
 
-func _nuke_the_cache() -> void:
-	if FileAccess.file_exists("res://.godot/uid_cache.bin"):
-		DirAccess.remove_absolute("res://.godot/uid_cache.bin")
-		var file_paths = _expand_to_files(["res://.godot/editor/"])
-		for path in file_paths:
-			if path.get_file().begins_with("filesystem"):
-				DirAccess.remove_absolute(path)
 
 func _replace_uids(paths):
-	var file_paths = _expand_to_files(paths)
+	var file_paths = Utilities.expand_to_files(paths)
 	_parse_path_extensions(file_paths, _find_and_replace_uid)
-	_nuke_the_cache()
+	Utilities.nuke_the_cache()
 
 func _erase_uids(paths):
-	var file_paths = _expand_to_files(paths)
+	var file_paths = Utilities.expand_to_files(paths)
 	_parse_path_extensions(file_paths, _find_and_erase_uid)
-	_nuke_the_cache()
+	Utilities.nuke_the_cache()
 
 func _erase_imported_uids(paths):
-	var file_paths = _expand_to_files(paths)
+	var file_paths = Utilities.expand_to_files(paths)
 	_parse_path_extensions(file_paths, _remove_imported_uids)
 
 func _popup_menu(paths):
@@ -177,7 +143,7 @@ func _popup_menu(paths):
 	var replace_icon = preload("res://addons/ef_ds_uids/assets/replace.svg")
 	var accepted_extensions : PackedStringArray = UID_IN_FILE_EXTENSIONS + UID_IN_IMPORT_FILE_EXTENSIONS + UID_IN_UID_FILE_EXTENSIONS
 	if paths.is_empty(): return
-	var file_paths = _expand_to_files(paths)
+	var file_paths = Utilities.expand_to_files(paths)
 	var files_with_matching_extensions : int = 0
 	for path in file_paths:
 		if path is String:
